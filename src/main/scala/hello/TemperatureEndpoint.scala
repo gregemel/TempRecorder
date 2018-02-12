@@ -2,44 +2,79 @@ package hello
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
+import akka.Done
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import spray.json.DefaultJsonProtocol._
+import spray.json.RootJsonFormat
 
-import scala.concurrent.ExecutionContextExecutor
 import scala.io.StdIn
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object TemperatureEndpoint {
+
+  // needed to run the route
+  implicit val system: ActorSystem = ActorSystem()
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  // needed for the future map/flatmap in the end and future in fetchItem and saveOrder
+  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+
+  var orders: List[Temperature] = Nil
+
+  // domain model
+  final case class Temperature(location: String, temp: Long)
+  final case class Order(items: List[Temperature])
+
+  // formats for unmarshalling and marshalling
+  implicit val itemFormat: RootJsonFormat[Temperature] = jsonFormat2(Temperature)
+  implicit val orderFormat: RootJsonFormat[Order] = jsonFormat1(Order)
+
+  // (fake) async database query api
+  def fetchItem(itemId: Long): Future[Option[Temperature]] = Future {
+    orders.find(o => o.temp == itemId)
+  }
+  def saveOrder(order: Order): Future[Done] = {
+    orders = order match {
+      case Order(items) => items ::: orders
+      case _            => orders
+    }
+    Future { Done }
+  }
+
   def main(args: Array[String]) {
 
-    implicit val system: ActorSystem = ActorSystem("my-system")
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-    // needed for the future flatMap/onComplete in the end
-    implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+    val route: Route =
+      get {
+        pathPrefix("item" / LongNumber) { id =>
+          // there might be no item for a given id
+          val maybeItem: Future[Option[Temperature]] = fetchItem(id)
 
-    val route =
-      path("temp") {
-        get {
-          complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>The current temperature is 68F</h1>"))
+          onSuccess(maybeItem) {
+            case Some(item) => complete(item)
+            case None       => complete(StatusCodes.NotFound)
+          }
         }
       } ~
-      path("hello") {
-        get {
-          complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to temp recorder in scala akka-http</h1>"))
+        post {
+          path("record-temp") {
+            entity(as[Order]) { order =>
+              val saved: Future[Done] = saveOrder(order)
+              onComplete(saved) { done =>
+                complete(s"temp recorded! $order\n")
+              }
+            }
+          }
         }
-      } ~
-      path("health") {
-        get {
-          complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>I FEEL GOOD!!!</h1>"))
-        }
-      }
 
     val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
-
     println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
     StdIn.readLine() // let it run until user presses return
     bindingFuture
       .flatMap(_.unbind()) // trigger unbinding from the port
-      .onComplete(_ => system.terminate()) // and shutdown when done
+      .onComplete(_ ⇒ system.terminate()) // and shutdown when done
+
   }
 }

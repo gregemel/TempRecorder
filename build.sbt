@@ -10,5 +10,6 @@ mainClass in Compile := Some("hello.World")
 
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-http"   % "10.1.0-RC1",
-  "com.typesafe.akka" %% "akka-stream" % "2.5.8" // or whatever the latest version is
+  "com.typesafe.akka" %% "akka-stream" % "2.5.8", // or whatever the latest version is
+  "com.typesafe.akka" %% "akka-http-spray-json" % "10.1.0-RC1"
 )
