@@ -8,4 +8,5 @@ _temp recorded! Temperature(xyz,70) log size=1_
 
 ## GET lookup based on temp... ???
 * curl http://localhost:8080/item/70
+
 _{"location":"xyz","temp":70}_
