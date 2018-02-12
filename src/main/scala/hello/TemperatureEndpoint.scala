@@ -22,24 +22,26 @@ object TemperatureEndpoint {
   // needed for the future map/flatmap in the end and future in fetchItem and saveOrder
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  var orders: List[Temperature] = Nil
+  var tempHistory: List[Temperature] = Nil
 
   // domain model
   final case class Temperature(location: String, temp: Long)
-  final case class Order(items: List[Temperature])
+  final case class TempLog(entries: List[Temperature])
 
   // formats for unmarshalling and marshalling
-  implicit val itemFormat: RootJsonFormat[Temperature] = jsonFormat2(Temperature)
-  implicit val orderFormat: RootJsonFormat[Order] = jsonFormat1(Order)
+  implicit val tempFormat: RootJsonFormat[Temperature] = jsonFormat2(Temperature)
 
   // (fake) async database query api
   def fetchItem(itemId: Long): Future[Option[Temperature]] = Future {
-    orders.find(o => o.temp == itemId)
+    println(s"fetchItem($itemId)")
+    tempHistory.find(o => o.temp == itemId)
   }
-  def saveOrder(order: Order): Future[Done] = {
-    orders = order match {
-      case Order(items) => items ::: orders
-      case _            => orders
+  def saveTemp(temp: Temperature): Future[Done] = {
+    temp match {
+      case Temperature(temp.location, temp.temp) =>
+        println(s"saving...$temp")
+        tempHistory = temp :: tempHistory
+      case _            => tempHistory
     }
     Future { Done }
   }
@@ -49,21 +51,25 @@ object TemperatureEndpoint {
     val route: Route =
       get {
         pathPrefix("item" / LongNumber) { id =>
-          // there might be no item for a given id
           val maybeItem: Future[Option[Temperature]] = fetchItem(id)
 
           onSuccess(maybeItem) {
-            case Some(item) => complete(item)
-            case None       => complete(StatusCodes.NotFound)
+            case Some(item) =>
+              println(s"item completed $item")
+              complete(item)
+
+            case None       =>
+              println("item failed to complete")
+              complete(StatusCodes.NotFound)
           }
         }
       } ~
         post {
           path("record-temp") {
-            entity(as[Order]) { order =>
-              val saved: Future[Done] = saveOrder(order)
+            entity(as[Temperature]) { temp =>
+              val saved: Future[Done] = saveTemp(temp)
               onComplete(saved) { done =>
-                complete(s"temp recorded! $order\n")
+                complete(s"temp recorded! $temp\nlog size=${tempHistory.size}")
               }
             }
           }
@@ -75,6 +81,5 @@ object TemperatureEndpoint {
     bindingFuture
       .flatMap(_.unbind()) // trigger unbinding from the port
       .onComplete(_ ⇒ system.terminate()) // and shutdown when done
-
   }
 }
