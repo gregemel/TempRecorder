@@ -22,21 +22,23 @@ object TemperatureEndpoint {
 
   var temperatureHistory: List[Temperature] = Nil
 
-  final case class Temperature(location: String, temp: Long)
+  final case class Temperature(location: String, temp: Long) {
+    println(s"p1 creating a temp ($location, $temp)")
+  }
   implicit val tempFormat: RootJsonFormat[Temperature] = jsonFormat2(Temperature)
 
   def fetchTemperature(itemId: Long): Future[Option[Temperature]] = Future {
-    println(s"g2 get temperature ($itemId) from in-memory db")
+    println(s"g3 get temperature ($itemId) from in-memory db")
     temperatureHistory.find(o => o.temp == itemId)
   }
 
   def saveTemperature(temp: Temperature): Future[Done] = {
     temp match {
       case Temperature(temp.location, temp.temp) =>
-        println(s"p1 saving valid temperature record: ($temp)")
+        println(s"p3 saving valid temperature record: ($temp)")
         temperatureHistory = temp :: temperatureHistory
       case _            =>
-        println(s"p1 somtheing worng...($temp)\n")
+        println(s"p3 somtheing worng...($temp)\n")
         temperatureHistory
     }
     Future { Done }
@@ -47,32 +49,35 @@ object TemperatureEndpoint {
     val route: Route =
       get {
         pathPrefix("temperature" / LongNumber) { id =>
+          println(s"g1 get $id")
           val futureMaybeTemperature: Future[Option[Temperature]] = fetchTemperature(id)
-          println("g1 about to get...")
+          println("g2 about to get...")
           val success = onSuccess(futureMaybeTemperature) {
             case Some(validId) =>
-              val msg = s"g4 yay, completed getting ($validId)\n"
+              val msg = s"g5 yay, completed getting ($validId)\n"
               println(msg)
               complete(msg)
             case None       =>
-              println("g4 get failed to complete\n")
+              println("g5 get failed to complete\n")
               complete(StatusCodes.NotFound)
           }
-          println("g3 waiting for maybe...")
+          println("g4 waiting for maybe...")
           success
         }
       } ~
         post {
           path("record-temp") {
+            println("p0 pull the post data")
             entity(as[Temperature]) { temp =>
+              println("p2 about to save")
               val saved: Future[Done] = saveTemperature(temp)
-              println("p2 write a temp record")
+              println("p4 write a temp record")
               val doneIt = onComplete(saved) { done =>
-                val msg = s"p4 ($done) temp recorded! ($temp) log size=${temperatureHistory.size}\n"
+                val msg = s"p6 ($done) temp recorded! ($temp) log size=${temperatureHistory.size}\n"
                 print(msg)
                 complete(msg)
               }
-              print("p3 about to write new record...\n")
+              print("p5 about to write new record...\n")
               doneIt
             }
           }
