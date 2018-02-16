@@ -16,32 +16,28 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object TemperatureEndpoint {
 
-  // needed to run the route
   implicit val system: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  // needed for the future map/flatmap in the end and future in fetchItem and saveOrder
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  var tempHistory: List[Temperature] = Nil
+  var temperatureHistory: List[Temperature] = Nil
 
-  // domain model
   final case class Temperature(location: String, temp: Long)
-  final case class TempLog(entries: List[Temperature])
-
-  // formats for unmarshalling and marshalling
   implicit val tempFormat: RootJsonFormat[Temperature] = jsonFormat2(Temperature)
 
-  // (fake) async database query api
-  def fetchItem(itemId: Long): Future[Option[Temperature]] = Future {
-    println(s"fetchItem($itemId)")
-    tempHistory.find(o => o.temp == itemId)
+  def fetchTemperature(itemId: Long): Future[Option[Temperature]] = Future {
+    println(s"fetchItem($itemId) from ")
+    temperatureHistory.find(o => o.temp == itemId)
   }
-  def saveTemp(temp: Temperature): Future[Done] = {
+
+  def saveTemperature(temp: Temperature): Future[Done] = {
     temp match {
       case Temperature(temp.location, temp.temp) =>
-        println(s"saving...$temp")
-        tempHistory = temp :: tempHistory
-      case _            => tempHistory
+        println(s"saving valid temperature record: $temp\n")
+        temperatureHistory = temp :: temperatureHistory
+      case _            =>
+        println(s"somtheing worng...$temp\n")
+        temperatureHistory
     }
     Future { Done }
   }
@@ -51,32 +47,37 @@ object TemperatureEndpoint {
     val route: Route =
       get {
         pathPrefix("item" / LongNumber) { id =>
-          val maybeItem: Future[Option[Temperature]] = fetchItem(id)
-
-          onSuccess(maybeItem) {
-            case Some(item) =>
-              println(s"item completed $item")
-              complete(item)
-
+          val futureMaybeTemperature: Future[Option[Temperature]] = fetchTemperature(id)
+          val success = onSuccess(futureMaybeTemperature) {
+            case Some(validId) =>
+              val msg = s"yay, completed getting $validId\n"
+              println(msg)
+              complete(msg)
             case None       =>
-              println("item failed to complete")
+              println("get failed to complete\n")
               complete(StatusCodes.NotFound)
           }
+          println("waiting for maybe...\n")
+          success
         }
       } ~
         post {
           path("record-temp") {
             entity(as[Temperature]) { temp =>
-              val saved: Future[Done] = saveTemp(temp)
-              onComplete(saved) { done =>
-                complete(s"temp recorded! $temp\nlog size=${tempHistory.size}")
+              val saved: Future[Done] = saveTemperature(temp)
+              val doneIt = onComplete(saved) { done =>
+                val msg = s"$done temp recorded! $temp\nlog size=${temperatureHistory.size}\n"
+                print(msg)
+                complete(msg)
               }
+              print("about to write new record...\n")
+              doneIt
             }
           }
         }
 
     val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
-    println(s"Server online at http://localhost:8080/\nPress RETURN to stop...")
+    println(s"Server online at http://localhost:8080/\nPress RETURN to stop...\n")
     StdIn.readLine() // let it run until user presses return
     bindingFuture
       .flatMap(_.unbind()) // trigger unbinding from the port
