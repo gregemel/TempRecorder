@@ -1,18 +1,18 @@
 package hello
 
+import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.stream.ActorMaterializer
-import akka.Done
-import akka.http.scaladsl.server.Route
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
+import akka.stream.ActorMaterializer
 import spray.json.DefaultJsonProtocol._
 import spray.json.RootJsonFormat
 
-import scala.io.StdIn
 import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.io.StdIn
 
 object TemperatureEndpoint {
 
@@ -22,10 +22,10 @@ object TemperatureEndpoint {
 
   var temperatureHistory: List[Temperature] = Nil
 
-  final case class Temperature(location: String, temp: Long) {
+  final case class Temperature(location: String, dateTime: String, temp: Long) {
     println(s"p1 creating a temp ($location, $temp)")
   }
-  implicit val tempFormat: RootJsonFormat[Temperature] = jsonFormat2(Temperature)
+  implicit val tempFormat: RootJsonFormat[Temperature] = jsonFormat3(Temperature)
 
   def fetchTemperature(itemId: Long): Future[Option[Temperature]] = Future {
     println(s"g3 get temperature ($itemId) from in-memory db")
@@ -34,7 +34,7 @@ object TemperatureEndpoint {
 
   def saveTemperature(temp: Temperature): Future[Done] = {
     temp match {
-      case Temperature(temp.location, temp.temp) =>
+      case Temperature(temp.location, temp.dateTime, temp.temp) =>
         println(s"p3 saving valid temperature record: ($temp)")
         temperatureHistory = temp :: temperatureHistory
       case _            =>
