@@ -8,6 +8,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
+import repository.TemperatureRepository
 import spray.json.DefaultJsonProtocol._
 import spray.json.RootJsonFormat
 
@@ -36,6 +37,7 @@ object TemperatureEndpoint {
     temp match {
       case Temperature(temp.location, temp.dateTime, temp.temp) =>
         println(s"p3 saving valid temperature record: ($temp)")
+        TemperatureRepository.saveTempurature(temp)
         temperatureHistory = temp :: temperatureHistory
       case _            =>
         println(s"p3 somtheing worng...($temp)\n")
