@@ -11,28 +11,8 @@ _temp recorded! Temperature(basement,2018-02-16T22:12:00,72) log size=1_
 
 _completed getting (Temperature(basement,2018-02-16T22:12:00,72))_
 
-
 ## steps to setup mongodb instance
-* $ mongo
-
-_MongoDB shell version v3.6.2_
-_connecting to: mongodb://127.0.0.1:27017_
-_MongoDB server version: 3.6.2_
-
-
-* use tempuratureLog
-
-_switched to db tempuratureLog_
-
-* db.createCollection("temps")
-
-_{ "ok" : 1 }_
-
-* db.temps.insert({location:"basement",dateTime:"2018-02-16T22:12:00",temp:72})
-
-_WriteResult({ "nInserted" : 1 })_
-
-
+* sudo service mongod start
 
 ## coming soon...
 * unit tests
