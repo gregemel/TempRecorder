@@ -6,25 +6,24 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import model.Temperature
-import repository.TemperatureRepository
+import repository.Repository
 import spray.json.DefaultJsonProtocol._
 import spray.json.RootJsonFormat
 
 import scala.concurrent.Future
 
-object TemperatureEvents {
+object Events {
 
   implicit val tempFormat: RootJsonFormat[Temperature] = jsonFormat3(Temperature)
-
 
   def routePostTemp: Route = {
     println("p0 pull the post data")
     entity(as[Temperature]) { temp =>
       println("p2 about to save")
-      val saved: Future[Done] = TemperatureRepository.saveTemperature(temp)
+      val saved: Future[Done] = Repository.saveTemperature(temp)
       println("p4 write a temp record")
       val doneIt = onComplete(saved) { done =>
-        val msg = s"p6 ($done) temp recorded! ($temp) log size=${TemperatureRepository.temperatureHistory.size}\n"
+        val msg = s"p6 ($done) temp recorded! ($temp) log size=${Repository.temperatureHistory.size}\n"
         print(msg)
         complete(msg)
       }
@@ -35,7 +34,7 @@ object TemperatureEvents {
 
   def routeGetTemp(id: Long): Route = {
     println(s"g1 get $id")
-    val futureMaybeTemperature: Future[Option[Temperature]] = TemperatureRepository.fetchTemperature(id)
+    val futureMaybeTemperature: Future[Option[Temperature]] = Repository.fetchTemperature(id)
     println("g2 about to get...")
     val success = onSuccess(futureMaybeTemperature) {
       case Some(validId) =>
@@ -49,5 +48,4 @@ object TemperatureEvents {
     println("g4 waiting for maybe...")
     success
   }
-
 }
