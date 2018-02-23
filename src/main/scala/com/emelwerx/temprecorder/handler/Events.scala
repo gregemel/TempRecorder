@@ -6,7 +6,7 @@ import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import com.emelwerx.temprecorder.model.Temperature
-import com.emelwerx.temprecorder.repository.Repository
+import com.emelwerx.temprecorder.repository.Repository.{fetchTemperature, saveTemperature}
 import spray.json.DefaultJsonProtocol._
 import spray.json.RootJsonFormat
 
@@ -20,10 +20,10 @@ object Events {
     println("p0 pull the post data")
     entity(as[Temperature]) { temp =>
       println("p2 about to save")
-      val saved: Future[Done] = Repository.saveTemperature(temp)
+      val saved: Future[Done] = saveTemperature(temp)
       println("p4 write a temp record")
       val doneIt = onComplete(saved) { done =>
-        val msg = s"p6 ($done) temp recorded! ($temp) log size=${Repository.temperatureHistory.size}\n"
+        val msg = s"p6 ($done) temp recorded! ($temp)\n"
         print(msg)
         complete(msg)
       }
@@ -34,7 +34,7 @@ object Events {
 
   def routeGetTemp(id: Long): Route = {
     println(s"g1 get $id")
-    val futureMaybeTemperature: Future[Option[Temperature]] = Repository.fetchTemperature(id)
+    val futureMaybeTemperature: Future[Option[Temperature]] = fetchTemperature(id)
     println("g2 about to get...")
     val success = onSuccess(futureMaybeTemperature) {
       case Some(validId) =>
