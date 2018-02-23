@@ -1,8 +1,8 @@
-package repository
+package com.emelwerx.temprecorder.repository
 
-import _root_.model.Temperature
+import com.emelwerx.temprecorder.model.Temperature
+import com.emelwerx.temprecorder.controller.Controller.system
 import akka.Done
-import controller.Controller.system
 import org.mongodb.scala._
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -11,7 +11,12 @@ object Repository {
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   var temperatureHistory: List[Temperature] = Nil
 
-  def fetchTemperature(itemId: Long): Future[Option[Temperature]] = Future {
+  def fetchTemperature(itemId: Long): Future[Option[Temperature]] =  {
+    println(s"g3 get temperature ($itemId) from in-memory db")
+    readTemperature(itemId)
+  }
+
+  def readTemperature(itemId: Long): Future[Option[Temperature]] = Future {
     println(s"g3 get temperature ($itemId) from in-memory db")
     temperatureHistory.find(o => o.temp == itemId)
   }

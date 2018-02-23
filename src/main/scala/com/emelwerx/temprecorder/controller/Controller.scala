@@ -1,14 +1,13 @@
-package controller
+package com.emelwerx.temprecorder.controller
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import handler.Events
+import com.emelwerx.temprecorder.handler.Events.{routeGetTemp,routePostTemp}
 
-import scala.concurrent.ExecutionContextExecutor
-import scala.io.StdIn
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Controller {
 
@@ -16,32 +15,31 @@ object Controller {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  def main(args: Array[String]) {
-
+  def bindServerEndpoint: Future[Http.ServerBinding] = {
     val route: Route =
       get {
         pathPrefix("temperature" / LongNumber) { id =>
-          Events.routeGetTemp(id)
+          routeGetTemp(id)
         }
       } ~
         post {
           path("record-temp") {
-            Events.routePostTemp
+            routePostTemp
           }
         }
 
     //todo: pull endpoint settings from config
-    val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
-    println(s"Server online at http://localhost:8080/\nPress RETURN to stop...\n")
+    val address = "localhost"
+    val port = 8080
+    val bindingFuture = Http().bindAndHandle(route, address, port)
+    println(s"server endpoint bound to http://$address:$port")
+    bindingFuture
+  }
 
-    StdIn.readLine() // wait until the return key is pressed
-    println("shutting down...")
-
+  def unbindServerEndpoint(bindingFuture: Future[Http.ServerBinding]): Unit = {
     bindingFuture
       .flatMap(_.unbind()) // trigger unbinding from the port
       .onComplete(_ ⇒ completeService) // and shutdown when done
-
-    println("...not yet...")
   }
 
   private def completeService = {
