@@ -3,15 +3,16 @@ package com.emelwerx.temprecorder.repository
 import java.util.concurrent.TimeUnit
 
 import akka.Done
-import com.emelwerx.temprecorder.controller.Controller.system
 import com.emelwerx.temprecorder.model.Temperature
 import com.emelwerx.temprecorder.repository.Helpers.ImplicitObservable
+import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.{Completed, Document, MongoClient, Observable, Observer}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 
 object Repository {
+  import com.emelwerx.temprecorder.controller.Controller.system
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
   implicit class DocumentObservable[C](val observable: Observable[Document]) extends ImplicitObservable[Document] {
@@ -30,11 +31,7 @@ object Repository {
     val something: Document = Await.result(observer.head(), Duration(10, TimeUnit.SECONDS))
 
     println(s"something has returned: ($something)\n")
-    var op = None: Option[Temperature]
-
-    op = Some(Temperature("loc", "date", 32))
-
-    op
+    Some(makeTemp(something))
   }
 
   def saveTemperature(temp: Temperature): Future[Done] = {
@@ -92,4 +89,12 @@ object Repository {
         "temp" -> temp.temp))
   }
 
+  def makeTemp(doc: Document): Temperature = {
+
+    val info: BsonDocument = doc.get[BsonDocument]("info").get
+
+    Temperature(info.getString("location").getValue,
+      info.getString("dateTime").getValue,
+      info.getInt32("temp").getValue)
+  }
 }

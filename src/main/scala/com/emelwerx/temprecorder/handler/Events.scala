@@ -21,7 +21,7 @@ object Events {
       onComplete(saveTemperature(temp)) { done =>
         val msg = s"p6 ($done) temp recorded! ($temp)\n"
         print(msg)
-        complete(msg)
+        complete(temp)
       }
     }
   }
@@ -31,7 +31,7 @@ object Events {
       case Some(validId) =>
         val msg = s"g5 yay, completed getting from uri ($validId)\n"
         println(msg)
-        complete(msg)
+        complete(validId)
       case None =>
         println("g5 get failed to complete\n")
         complete(StatusCodes.NotFound)
