@@ -17,35 +17,24 @@ object Events {
   implicit val tempFormat: RootJsonFormat[Temperature] = jsonFormat3(Temperature)
 
   def routePostTemp: Route = {
-    println("p0 pull the post data")
     entity(as[Temperature]) { temp =>
-      println("p2 about to save")
-      val saved: Future[Done] = saveTemperature(temp)
-      println("p4 write a temp record")
-      val doneIt = onComplete(saved) { done =>
+      onComplete(saveTemperature(temp)) { done =>
         val msg = s"p6 ($done) temp recorded! ($temp)\n"
         print(msg)
         complete(msg)
       }
-      print("p5 about to write new record...\n")
-      doneIt
     }
   }
 
   def routeGetTemp(id: Long): Route = {
-    println(s"g1 get $id")
-    val futureMaybeTemperature: Future[Option[Temperature]] = fetchTemperature(id)
-    println("g2 about to get...")
-    val success = onSuccess(futureMaybeTemperature) {
+    onSuccess(fetchTemperature(id)) {
       case Some(validId) =>
-        val msg = s"g5 yay, completed getting ($validId)\n"
+        val msg = s"g5 yay, completed getting from uri ($validId)\n"
         println(msg)
         complete(msg)
       case None =>
         println("g5 get failed to complete\n")
         complete(StatusCodes.NotFound)
     }
-    println("g4 waiting for maybe...")
-    success
   }
 }
