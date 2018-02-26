@@ -21,20 +21,14 @@ object Repository {
 
   def fetchTemperature(itemId: Long): Future[Option[Temperature]] = Future {
     println(s"g3 get temperature ($itemId) from in-memory db")
-    readTemperature(itemId)
-  }
-
-  def readTemperature(itemId: Long): Option[Temperature] = {
-    println(s"g3 getting temperature ($itemId) from mongodb")
     import org.mongodb.scala.model.Filters._
     val observer = collection.find(equal("info.temp", itemId)).first()
     val document: Document = Await.result(observer.head(), Duration(10, TimeUnit.SECONDS))
-
     println(s"got a document has returned: ($document)\n")
     Some(makeTemp(document))
   }
 
-  def makeTemp(doc: Document): Temperature = {
+  private def makeTemp(doc: Document): Temperature = {
     val info: BsonDocument = doc.get[BsonDocument]("info").get
     Temperature(
       info.getString("location").getValue,
@@ -42,18 +36,18 @@ object Repository {
       info.getInt64("temp").getValue)
   }
 
-  def saveTemperature(temp: Temperature): Future[Done] = {
+  def saveTemperature(temp: Temperature): Future[Done] = Future {
     temp match {
       case Temperature(temp.location, temp.dateTime, temp.temp) =>
         println(s"p3 saving valid temperature record: ($temp)")
         writeTemperature(temp)
       case _            =>
-        println(s"p3 somtheing worng...($temp)\n")
+        println(s"p3 somtheing worng...($temp)\n")    //this never gets called.  broken json gets handled upstream
     }
-    Future { Done }
+    Done
   }
 
-  def writeTemperature(temp: Temperature): Unit = {
+  private def writeTemperature(temp: Temperature): Unit = {
     collection.insertOne(makeDoc(temp))
       .subscribe(new Observer[Completed] {
         override def onNext(result: Completed): Unit = {
@@ -72,7 +66,7 @@ object Repository {
       .getCollection("temps")
   }
 
-  def updateLogSize(): Unit = {
+  private def updateLogSize(): Unit = {
     val insertAndCount = for {
       countResult <- collection.count()
     } yield countResult
@@ -86,7 +80,7 @@ object Repository {
     })
   }
 
-  def makeDoc(temp: Temperature): Document = {
+  private def makeDoc(temp: Temperature): Document = {
     Document(
       "name" -> "MongoDB",
       "type" -> "database",

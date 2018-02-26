@@ -10,7 +10,6 @@ import com.emelwerx.temprecorder.handler.Events.{routeGetTemp,routePostTemp}
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Controller {
-
   implicit val system: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
@@ -39,11 +38,11 @@ object Controller {
   def unbindServerEndpoint(bindingFuture: Future[Http.ServerBinding]): Unit = {
     bindingFuture
       .flatMap(_.unbind()) // trigger unbinding from the port
-      .onComplete(_ ⇒ completeService) // and shutdown when done
+      .onComplete(_ ⇒ sayGoodbye) // and shutdown when done
   }
 
-  private def completeService = {
-    println("now!")
+  private def sayGoodbye = {
+    println("\ngoodbye\n")
     system.terminate()
   }
 }
