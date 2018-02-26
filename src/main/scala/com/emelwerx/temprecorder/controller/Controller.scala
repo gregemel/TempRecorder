@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import com.emelwerx.temprecorder.handler.Events.{routeGetTemp,routePostTemp}
+import com.emelwerx.temprecorder.handler.Events.{getTemperature,postTemperature}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -18,12 +18,12 @@ object Controller {
     val route: Route =
       get {
         pathPrefix("temperature" / LongNumber) { id =>
-          routeGetTemp(id)
+          getTemperature(id)
         }
       } ~
         post {
           path("record-temp") {
-            routePostTemp
+            postTemperature
           }
         }
 

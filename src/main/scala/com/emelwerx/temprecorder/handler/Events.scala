@@ -13,7 +13,7 @@ object Events {
 
   implicit val tempFormat: RootJsonFormat[Temperature] = jsonFormat3(Temperature)
 
-  def routePostTemp: Route = {
+  def postTemperature: Route = {
     entity(as[Temperature]) { temp =>
       onComplete(saveTemperature(temp)) { done =>
         val msg = s"p6 ($done) temp recorded! ($temp)\n"
@@ -23,7 +23,7 @@ object Events {
     }
   }
 
-  def routeGetTemp(id: Long): Route = {
+  def getTemperature(id: Long): Route = {
     onSuccess(fetchTemperature(id)) {
       case Some(validId) =>
         val msg = s"g5 yay, completed getting from uri ($validId)\n"

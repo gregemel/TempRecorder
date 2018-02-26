@@ -28,14 +28,6 @@ object Repository {
     Some(makeTemp(document))
   }
 
-  private def makeTemp(doc: Document): Temperature = {
-    val info: BsonDocument = doc.get[BsonDocument]("info").get
-    Temperature(
-      info.getString("location").getValue,
-      info.getString("dateTime").getValue,
-      info.getInt64("temp").getValue)
-  }
-
   def saveTemperature(temp: Temperature): Future[Done] = Future {
     temp match {
       case Temperature(temp.location, temp.dateTime, temp.temp) =>
@@ -89,5 +81,13 @@ object Repository {
         "location" -> temp.location,
         "dateTime" -> temp.dateTime,
         "temp" -> temp.temp))
+  }
+
+  private def makeTemp(doc: Document): Temperature = {
+    val info: BsonDocument = doc.get[BsonDocument]("info").get
+    Temperature(
+      info.getString("location").getValue,
+      info.getString("dateTime").getValue,
+      info.getInt64("temp").getValue)
   }
 }
