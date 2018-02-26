@@ -24,14 +24,22 @@ object Repository {
     readTemperature(itemId)
   }
 
-
   def readTemperature(itemId: Long): Option[Temperature] = {
-    println(s"g3 get temperature ($itemId) from mongodb")
-    val observer = collection.find().first()
-    val something: Document = Await.result(observer.head(), Duration(10, TimeUnit.SECONDS))
+    println(s"g3 getting temperature ($itemId) from mongodb")
+    import org.mongodb.scala.model.Filters._
+    val observer = collection.find(equal("info.temp", itemId)).first()
+    val document: Document = Await.result(observer.head(), Duration(10, TimeUnit.SECONDS))
 
-    println(s"something has returned: ($something)\n")
-    Some(makeTemp(something))
+    println(s"got a document has returned: ($document)\n")
+    Some(makeTemp(document))
+  }
+
+  def makeTemp(doc: Document): Temperature = {
+    val info: BsonDocument = doc.get[BsonDocument]("info").get
+    Temperature(
+      info.getString("location").getValue,
+      info.getString("dateTime").getValue,
+      info.getInt64("temp").getValue)
   }
 
   def saveTemperature(temp: Temperature): Future[Done] = {
@@ -87,14 +95,5 @@ object Repository {
         "location" -> temp.location,
         "dateTime" -> temp.dateTime,
         "temp" -> temp.temp))
-  }
-
-  def makeTemp(doc: Document): Temperature = {
-
-    val info: BsonDocument = doc.get[BsonDocument]("info").get
-
-    Temperature(info.getString("location").getValue,
-      info.getString("dateTime").getValue,
-      info.getInt32("temp").getValue)
   }
 }
