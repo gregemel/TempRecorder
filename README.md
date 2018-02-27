@@ -5,18 +5,18 @@ Working code where a REST endpoint receives and records info like current temp a
 # Purpose
 This project exists for me to practice building Akka components in Scala.
 It includes working code for an http micro-service that logs temperature readings into a local MongoDB instance.
-This is very much a work in progress and lacks fundamental engineering like like security, test automation, and deployments.
+This is very much a work in progress and lacks fundamental engineering like like security, test automation, and logging.
 
 ### TempRecorder 
 TempRecorder is an http endpoint that reads and writes from a local MongoDB instance. 
 The endpoint uses http Akka and the MongoDB Scala Driver.
 Working code marshals json from http Akka, into a domain model object, then persists in MongoDB as json again.
 At a bare minimum, a REST microservice needs to handle http post/get verbs and read/writes to the database.
-This project meets that basic goal, even though it is not full entity crud.
+This project meets that basic goal.
 
 ## Code
 The code is currently structured in model, controller, repository type layouts, similar to REST services written in conventional java/spring.
-This structure will likely changing as I become more familiar with idiomatic Scala, Akka,  and Actors.  
+This structure will likely changing as I become more familiar with idiomatic Scala and Akka.  
 
 ### Controller
 The controller defines the port binding and uri routes 

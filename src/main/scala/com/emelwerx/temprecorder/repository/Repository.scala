@@ -20,35 +20,29 @@ object Repository {
   }
 
   def fetchTemperature(itemId: Long): Future[Option[Temperature]] = Future {
-    println(s"g3 get temperature ($itemId) from in-memory db")
+    println(s"g2 get temperature ($itemId) from MongoDB")
     import org.mongodb.scala.model.Filters._
-    val observer = collection.find(equal("info.temp", itemId)).first()
+    val observer = collection
+      .find(equal("info.temp", itemId))
+      .first()
+    println("blocking...\n")
     val document: Document = Await.result(observer.head(), Duration(10, TimeUnit.SECONDS))
-    println(s"got a document has returned: ($document)\n")
+    println(s"g3 MongoDB returned: ($document)\n")
     Some(makeTemp(document))
   }
 
   def saveTemperature(temp: Temperature): Future[Done] = Future {
-    temp match {
-      case Temperature(temp.location, temp.dateTime, temp.temp) =>
-        println(s"p3 saving valid temperature record: ($temp)")
-        writeTemperature(temp)
-      case _            =>
-        println(s"p3 somtheing worng...($temp)\n")    //this never gets called.  broken json gets handled upstream
-    }
-    Done
-  }
-
-  private def writeTemperature(temp: Temperature): Unit = {
-    collection.insertOne(makeDoc(temp))
+    collection
+      .insertOne(makeDoc(temp))
       .subscribe(new Observer[Completed] {
         override def onNext(result: Completed): Unit = {
-          println(s"Inserted! ($result)")
-          updateLogSize()
+          println(s"p3 Inserted ($result) in MongoDB")
+          printRecordCount()
         }
-        override def onError(e: Throwable): Unit = println("Failed!")
-        override def onComplete(): Unit = println(s"Completed ($temp)")
+        override def onError(e: Throwable): Unit = println("p3 Failed!")
+        override def onComplete(): Unit = println(s"p4 completed recording ($temp) in MongoDB")
       })
+    Done
   }
 
   private lazy val collection = {
@@ -58,17 +52,15 @@ object Repository {
       .getCollection("temps")
   }
 
-  private def updateLogSize(): Unit = {
-    val insertAndCount = for {
-      countResult <- collection.count()
+  private def printRecordCount(): Unit = {
+    val value: Observable[Long] = for {
+      countResult <- collection.count
     } yield countResult
 
-    println(s"countResult: ($insertAndCount)")
-
-    insertAndCount.subscribe(new Observer[Long] {
-      override def onNext(result: Long): Unit = println(s"count! ($result)")
+    value.subscribe(new Observer[Long] {
+      override def onNext(result: Long): Unit = println(s"current record count=($result)")
       override def onError(e: Throwable): Unit = println("failed!")
-      override def onComplete(): Unit = println("completed!")
+      override def onComplete(): Unit = println("count completed!")
     })
   }
 
